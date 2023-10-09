@@ -20,8 +20,9 @@ export async function POST(request: NextRequest) {
   try {
     const data = await request.formData();
     const image = data.get("file") as File;
-    const allowed = (data.get("allowed") as string).split("|");
-    const max_size = Number(data.get("max_size") ?? "2000000");
+
+    // const allowed = (data.get("allowed") as string).split("|");
+    // const max_size = Number(data.get("max_size") ?? "2000000");
 
     if (!image) {
       return NextResponse.json(
@@ -30,23 +31,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const mymeType = image.type.split("/");
-    if (mymeType[0] !== "image" || !allowed.includes(mymeType[1])) {
-      return NextResponse.json(
-        { error: "INVALID_TYPE", message: "UploadErrors.INVALID_TYPE" },
-        { status: 400 }
-      );
-    }
+    // const mymeType = image.type.split("/");
+    // if (mymeType[0] !== "image" || !allowed.includes(mymeType[1])) {
+    //   return NextResponse.json(
+    //     { error: "INVALID_TYPE", message: "UploadErrors.INVALID_TYPE" },
+    //     { status: 400 }
+    //   );
+    // }
 
-    if (image.size > max_size) {
-      return NextResponse.json(
-        { error: "INVALID_SIZE", message: "UploadErrors.INVALID_SIZE" },
-        { status: 400 }
-      );
-    }
+    // if (image.size > max_size) {
+    //   return NextResponse.json(
+    //     { error: "INVALID_SIZE", message: "UploadErrors.INVALID_SIZE" },
+    //     { status: 400 }
+    //   );
+    // }
 
-    const bytes = await image.arrayBuffer();
-    const buffer = Buffer.from(bytes);
+    const arrayBuffer = await image.arrayBuffer();
+    const buffer = new Uint8Array(arrayBuffer);
 
     const response = await new Promise<UploadApiResponse>((resolve, reject) => {
       const stream = cloudinary.uploader.upload_stream(
@@ -58,15 +59,16 @@ export async function POST(request: NextRequest) {
           },
         },
         (err, res) => {
-          console.error("[uploader error] ", err);
-          if (err) reject(err);
+          if (err) {
+            console.error("[uploader error] ", err);
+            reject(err);
+          }
 
           resolve(res!);
         }
       );
 
-      stream.write(buffer);
-      stream.end();
+      stream.end(buffer);
     });
 
     return NextResponse.json({
